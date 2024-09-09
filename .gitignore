@@ -1,0 +1,8 @@
+
+/.vs
+*.vcxproj
+*.filters
+*.sln
+*.user
+/DiceRoller/x64
+/x64

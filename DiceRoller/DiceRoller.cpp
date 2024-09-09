@@ -19,12 +19,9 @@ auto roller = [](uint32_t attemptsToDoOnThread) {
 	//Random device is used in order to get a random seed
 	std::random_device rd;
 
-	//xoshiro128** is a pseudorandom number generator. I believe Mersenne Twister is used by the python random function. I opted for this one since it's faster and should give similarly reliable results ().
-	XoshiroCpp::Xoshiro256StarStar gen(rd());
-
-
-	std::uniform_int_distribution<int> dist(1, 4);
-
+	//xoroshiro128** is a pseudorandom number generator. I believe Mersenne Twister is used by the python random function. I opted for this one since it's faster and should give similarly reliable results.
+	XoshiroCpp::Xoroshiro128StarStar gen(rd());
+ 
 	uint16_t correctRolls = 0;
 
 	for (uint32_t i = 0; i < attemptsToDoOnThread; i++)
@@ -33,8 +30,9 @@ auto roller = [](uint32_t attemptsToDoOnThread) {
 		uint16_t previousMax = maxCorrectRolls.load();
 		for (uint16_t f = 0; f < rollsPerAttempt; f++)
 		{
-			//Since the distribution is [1,4] it's a 1/4 chance
-			if (dist(gen) == 1)
+			
+			//Since the distribution is [0, 2^64-1] using modulo (that is a multiple of 2) should still be uniformly distributed (it's faster than std::uniform_int_distribution)
+			if (gen()%4 == 0)
 				correctRolls++;
 
 			//There is no point in keeping the attempt going if we can't beat the highscore, makes the program approximately 14% faster
@@ -44,8 +42,6 @@ auto roller = [](uint32_t attemptsToDoOnThread) {
 
 		while(correctRolls > previousMax)
 			maxCorrectRolls.compare_exchange_strong(previousMax, correctRolls);
-		
-
 
 		totalFinishedAttempts.fetch_add(1);
 		correctRolls = 0;
@@ -55,9 +51,9 @@ auto roller = [](uint32_t attemptsToDoOnThread) {
 int main()
 {
 
-	// 1000^3 = 1 billion
-	const uint32_t totalAttempts = 1000*1000*1000;
-	const uint32_t threadAmount = 5;
+	// 10^9 = 1 billion
+	const uint32_t totalAttempts = pow(10, 9);
+	const uint32_t threadAmount = 15;
 
 
 	auto start = std::chrono::high_resolution_clock::now();
